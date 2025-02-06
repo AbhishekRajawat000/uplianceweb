@@ -1,0 +1,32 @@
+{
+  "users": [
+    {
+      "id": "da12a8e4-c4e1-4356-acf0-dff72603a932",
+      "name": "ABHISHEK SINGH RAJAWAT",
+      "address": "KGN GARDEN",
+      "email": "abhishekrajawat2000@gmail.com",
+      "phone": "9630359155"
+    },
+    {
+      "id": "1a960b76-3b0a-4792-a333-4cebc8c64229",
+      "name": "dsabdjsa",
+      "address": "sadfas",
+      "email": "rajawatsinghabhishek50@gmail.com",
+      "phone": "safsadfd"
+    },
+    {
+      "id": "9daf77c4-1c40-4aea-ba27-c8bd6945848a",
+      "name": "asdfkljsad",
+      "address": "sfasda",
+      "email": "rajawatsinghabhishek50@gmail.com",
+      "phone": "888888888"
+    },
+    {
+      "id": "94fef024-0967-4201-b4e7-f82619d708ef",
+      "name": "sdfsa",
+      "address": "safsad",
+      "email": "abhishekrajawat2000@gmail.com",
+      "phone": "9630359155"
+    }
+  ]
+}
