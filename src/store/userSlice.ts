@@ -3,76 +3,57 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 export interface UserData {
   id: string;
   name: string;
-  address: string;
   email: string;
   phone: string;
+  address: string;
 }
 
-// Fallback to localStorage if server is not available
-const saveToLocalStorage = (userData: UserData) => {
-  try {
-    const existingData = localStorage.getItem('users');
-    const users = existingData ? JSON.parse(existingData) : [];
-    users.push(userData);
-    localStorage.setItem('users', JSON.stringify(users));
-    return userData;
-  } catch (error) {
-    throw new Error('Failed to save to localStorage');
-  }
+interface UserState {
+  users: UserData[];
+  status: 'idle' | 'loading' | 'succeeded' | 'failed';
+  error: string | null;
+}
+
+const initialState: UserState = {
+  users: [],
+  status: 'idle',
+  error: null
 };
 
 export const saveUser = createAsyncThunk(
   'user/saveUser',
   async (userData: UserData) => {
+    console.log('Starting saveUser thunk with data:', userData);
     try {
-      const response = await fetch('http://localhost:3001/users', {
+      const response = await fetch('http://localhost:3000/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
         },
         body: JSON.stringify(userData),
       });
-      
-      if (!response.ok) {
-        // If server fails, fallback to localStorage
-        return saveToLocalStorage(userData);
-      }
-      
-      return response.json();
-    } catch (error) {
-      // If server is not available, fallback to localStorage
-      return saveToLocalStorage(userData);
-    }
-  }
-);
 
-export const getUsers = createAsyncThunk(
-  'user/getUsers',
-  async () => {
-    try {
-      const response = await fetch('http://localhost:3001/users');
+      console.log('Response status:', response.status);
+      
       if (!response.ok) {
-        // If server fails, get from localStorage
-        const data = localStorage.getItem('users');
-        return data ? JSON.parse(data) : [];
+        const errorText = await response.text();
+        console.error('Server error response:', errorText);
+        throw new Error(`Failed to save user: ${response.status} ${response.statusText}`);
       }
-      return response.json();
+
+      const savedUser = await response.json();
+      console.log('Successfully saved user:', savedUser);
+      return savedUser;
     } catch (error) {
-      // If server is not available, get from localStorage
-      const data = localStorage.getItem('users');
-      return data ? JSON.parse(data) : [];
+      console.error('Error in saveUser thunk:', error);
+      throw error;
     }
   }
 );
 
 const userSlice = createSlice({
   name: 'user',
-  initialState: {
-    users: [] as UserData[],
-    status: 'idle',
-    error: null as string | null,
-  },
+  initialState,
   reducers: {},
   extraReducers: (builder) => {
     builder
@@ -82,16 +63,10 @@ const userSlice = createSlice({
       .addCase(saveUser.fulfilled, (state, action) => {
         state.status = 'succeeded';
         state.users.push(action.payload);
-        state.error = null;
       })
       .addCase(saveUser.rejected, (state, action) => {
         state.status = 'failed';
-        state.error = action.error.message || 'Failed to save user data';
-      })
-      .addCase(getUsers.fulfilled, (state, action) => {
-        state.status = 'succeeded';
-        state.users = action.payload;
-        state.error = null;
+        state.error = action.error.message || 'Failed to save user';
       });
   },
 });

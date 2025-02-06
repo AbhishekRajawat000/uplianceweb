@@ -11,9 +11,9 @@ import {
   FormErrorMessage
 } from '@chakra-ui/react';
 import { v4 as uuidv4 } from 'uuid';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { saveUser, UserData } from '../store/userSlice';
-import type { AppDispatch, RootState } from '../store/store';
+import type { AppDispatch } from '../store/store';
 
 const UserForm = () => {
   const [userData, setUserData] = useState<UserData>({
@@ -26,68 +26,50 @@ const UserForm = () => {
   
   const [errors, setErrors] = useState<Partial<UserData>>({});
   const dispatch = useDispatch<AppDispatch>();
-  const status = useSelector((state: RootState) => state.user.status);
   const toast = useToast();
 
   const validateForm = () => {
     const newErrors: Partial<UserData> = {};
     
-    if (!userData.name.trim()) {
-      newErrors.name = 'Name is required';
+    if (!userData.name) newErrors.name = 'Name is required';
+    if (!userData.email) newErrors.email = 'Email is required';
+    if (!userData.phone) {
+      newErrors.phone = 'Phone is required';
+    } else if (!/^\d{10}$/.test(userData.phone)) {
+      newErrors.phone = 'Phone number must be exactly 10 digits';
     }
-
-    if (!userData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email)) {
-      newErrors.email = 'Invalid email format';
-    }
-
-    if (!userData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
-    } else if (!/^\d+$/.test(userData.phone)) {
-      newErrors.phone = 'Phone number should contain only digits';
-    } else if (userData.phone.length !== 10) {
-      newErrors.phone = 'Phone number should be exactly 10 digits';
-    }
+    if (!userData.address) newErrors.address = 'Address is required';
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    // Special handling for phone input
-    if (name === 'phone') {
-      // Only allow digits
-      const digitsOnly = value.replace(/\D/g, '');
-      // Limit to 10 digits
-      const truncated = digitsOnly.slice(0, 10);
-      setUserData(prev => ({ ...prev, [name]: truncated }));
-    } else {
-      setUserData(prev => ({ ...prev, [name]: value }));
-    }
-
-    // Clear error when user starts typing
-    if (errors[name as keyof UserData]) {
-      setErrors(prev => ({ ...prev, [name]: undefined }));
-    }
-  };
-
-  const handleSubmit = async () => {
+    // Generate new ID before submission
+    const newId = uuidv4();
+    const formData = { ...userData, id: newId };
+    console.log('Submitting form data:', formData);
+    
     if (!validateForm()) {
-      toast({
-        title: 'Validation Error',
-        description: 'Please fill in all required fields correctly',
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
-      });
+      console.log('Form validation failed:', errors);
       return;
     }
 
     try {
-      await dispatch(saveUser(userData)).unwrap();
+      console.log('Dispatching saveUser action...');
+      const result = await dispatch(saveUser(formData)).unwrap();
+      console.log('Save user result:', result);
+      
+      toast({
+        title: 'User saved successfully',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+      
+      // Reset form after successful submission
       setUserData({
         id: uuidv4(),
         name: '',
@@ -95,17 +77,11 @@ const UserForm = () => {
         email: '',
         phone: ''
       });
-      toast({
-        title: 'Success',
-        description: 'User data saved successfully',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
     } catch (error) {
+      console.error('Error saving user:', error);
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to save user data',
+        title: 'Error saving user',
+        description: error instanceof Error ? error.message : 'Please try again',
         status: 'error',
         duration: 3000,
         isClosable: true,
@@ -113,60 +89,78 @@ const UserForm = () => {
     }
   };
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setUserData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    // Clear error when user starts typing
+    if (errors[name as keyof UserData]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, ''); // Remove all non-digits
+    setUserData(prev => ({ ...prev, phone: value }));
+  };
+
   return (
-    <Box p={4} borderWidth={1} borderRadius="lg">
-      <VStack spacing={4}>
-        <Text>User ID: {userData.id}</Text>
+    <Box as="form" onSubmit={handleSubmit} width="100%" maxWidth="500px" p={4}>
+      <VStack spacing={4} align="stretch">
         <FormControl isInvalid={!!errors.name}>
-          <FormLabel>Name *</FormLabel>
-          <Input 
-            name="name" 
-            value={userData.name} 
+          <FormLabel>Name</FormLabel>
+          <Input
+            name="name"
+            value={userData.name}
             onChange={handleChange}
-            placeholder="Enter your name" 
+            placeholder="Enter name"
           />
           <FormErrorMessage>{errors.name}</FormErrorMessage>
         </FormControl>
-        <FormControl>
-          <FormLabel>Address</FormLabel>
-          <Input 
-            name="address" 
-            value={userData.address} 
-            onChange={handleChange}
-            placeholder="Enter your address"
-          />
-        </FormControl>
+
         <FormControl isInvalid={!!errors.email}>
-          <FormLabel>Email *</FormLabel>
-          <Input 
-            name="email" 
-            type="email" 
-            value={userData.email} 
+          <FormLabel>Email</FormLabel>
+          <Input
+            name="email"
+            type="email"
+            value={userData.email}
             onChange={handleChange}
-            placeholder="Enter your email"
+            placeholder="Enter email"
           />
           <FormErrorMessage>{errors.email}</FormErrorMessage>
         </FormControl>
+
         <FormControl isInvalid={!!errors.phone}>
-          <FormLabel>Phone * (10 digits)</FormLabel>
-          <Input 
-            name="phone" 
-            value={userData.phone} 
-            onChange={handleChange}
-            placeholder="Enter 10-digit phone number"
+          <FormLabel>Phone Number</FormLabel>
+          <Input
+            type="tel"
+            name="phone"
+            value={userData.phone}
+            onChange={handlePhoneChange}
             maxLength={10}
-            pattern="\d{10}"
+            placeholder="Enter 10 digit phone number"
           />
           <FormErrorMessage>{errors.phone}</FormErrorMessage>
         </FormControl>
-        <Button 
-          colorScheme="blue" 
-          onClick={handleSubmit}
-          isLoading={status === 'loading'}
-          loadingText="Saving"
-          width="100%"
-        >
-          Save
+
+        <FormControl isInvalid={!!errors.address}>
+          <FormLabel>Address</FormLabel>
+          <Input
+            name="address"
+            value={userData.address}
+            onChange={handleChange}
+            placeholder="Enter address"
+          />
+          <FormErrorMessage>{errors.address}</FormErrorMessage>
+        </FormControl>
+
+        <Button type="submit" colorScheme="blue">
+          Save User
         </Button>
       </VStack>
     </Box>

@@ -5,24 +5,16 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    host: true,
+    host: true, // Listen on all addresses
     strictPort: true,
-    cors: true,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET,HEAD,PUT,PATCH,POST,DELETE',
-      'Access-Control-Allow-Headers': 'Origin, X-Requested-With, Content-Type, Accept'
-    },
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-        secure: false,
-        ws: true
-      }
-    },
     hmr: {
+      protocol: 'ws',
+      host: 'localhost',
+      port: 5173,
       clientPort: 5173
+    },
+    watch: {
+      usePolling: true
     }
   }
 })
